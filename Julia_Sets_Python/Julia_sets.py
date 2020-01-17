@@ -2,79 +2,48 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 
-# Image width and height; parameters for the plot
-im_width, im_height = 500, 500
-c = complex(-0.1, 0.65)
-zabs_max = 10
-nit_max = 1000
-xmin, xmax = -1.5, 1.5
-xwidth = xmax - xmin
-ymin, ymax = -1.5, 1.5
-yheight = ymax - ymin
-
-julia = np.zeros((im_width, im_height))
-for ix in range(im_width):
-    for iy in range(im_height):
-        nit = 0
-        # Map pixel position to a point in the complex plane
-        z = complex(ix / im_width * xwidth + xmin,
-                    iy / im_height * yheight + ymin)
-        # Do the iterations
-        while abs(z) <= zabs_max and nit < nit_max:
-            z = z**2 + c
-            nit += 1
-        shade = 1-np.sqrt(nit / nit_max)
-        ratio = nit / nit_max
-        julia[ix,iy] = ratio
-
-fig, ax = plt.subplots()
-ax.imshow(julia, interpolation='nearest', cmap=cm.hot)
-# Set the tick labels to the coordinates of z0 in the complex plane
-xtick_labels = np.linspace(xmin, xmax, xwidth / 0.5)
-ax.set_xticks([(x-xmin) / xwidth * im_width for x in xtick_labels])
-ax.set_xticklabels(['{:.1f}'.format(xtick) for xtick in xtick_labels])
-ytick_labels = np.linspace(ymin, ymax, yheight / 0.5)
-ax.set_yticks([(y-ymin) / yheight * im_height for y in ytick_labels])
-ax.set_yticklabels(['{:.1f}'.format(ytick) for ytick in ytick_labels])
-plt.show()
-
 class Julia: 
-    def __init__(self):
-        self.im_width, self.im_height = 500, 500
-        self.c = complex(0.0, 0.0)
-        self.zabs_max = 10
-        self.nit_max = 1000
-        self.xmin, self.xmax = -1.5, 1.5
-        xwidth = self.xmin - self.xmax
-        self.ymin, self.ymax = -1.5, 1.5
-        yheight = self.ymin - self.ymax
-        julia = np.zeros((im_width, im_height))
-            for ix in range(im_width):
-                for iy in range(im_height):
-                    nit = 0
-                    # Map pixel position to a point in the complex plane
-                    z = complex(ix / im_width * xwidth + xmin,
-                                iy / im_height * yheight + ymin)
+
+    def __init__(self, im_width = 500, im_height = 500, zabs_max = 10, nit_max =1000, xmin = -1.5 , xmax = 1.5, ymin = -1.5, ymax = 1.5, c = complex(0.0, 0.0)):
+        self.im_width, self.im_height = im_width, im_height
+        self.c = c
+        self.zabs_max = zabs_max
+        self.nit_max = nit_max
+        self.xmin, self.xmax = xmin, xmax
+        self.xwidth = self.xmin - self.xmax
+        self.ymin, self.ymax = ymin, ymax
+        self.yheight = self.ymin - self.ymax
+        self.julia = np.zeros((self.im_width, self.im_height))
+        for ix in range(self.im_width):
+            for iy in range(self.im_height):
+                nit = 0
+                # Map pixel position to a point in the complex plane
+                self.z = complex(ix / self.im_width * self.xwidth + self.xmin,
+                                iy / self.im_height * self.yheight + self.ymin)
+                # Do the iterations
+                while abs(self.z) <= self.zabs_max and nit < self.nit_max:
+                    self.z = self.z**2 + self.c
+                    nit += 1
+                shade = 1-np.sqrt(nit / self.nit_max)
+                ratio = nit / self.nit_max
+                self.julia[ix, iy] = ratio
     
-    def set_image_width(width):
-        self.im_width = width
-
-    def set_image_height(height):
-        self.im_height = height
-
-    def 
-
     def plot(self): 
         fig, ax = plt.subplots()
-        ax.imshow(julia, interpolation='nearest', cmap=cm.hot)
+        ax.imshow(self.julia, interpolation='nearest', cmap=cm.hot)
         # Set the tick labels to the coordinates of z0 in the complex plane
-        xtick_labels = np.linspace(xmin, xmax, xwidth / 0.5)
-        ax.set_xticks([(x-xmin) / xwidth * im_width for x in xtick_labels])
+        xtick_labels = np.linspace(self.xmin, self.xmax, self.xwidth / 0.5)
+        ax.set_xticks([(x-self.xmin) / self.xwidth * self.im_width for x in xtick_labels])
         ax.set_xticklabels(['{:.1f}'.format(xtick) for xtick in xtick_labels])
-        ytick_labels = np.linspace(ymin, ymax, yheight / 0.5)
-        ax.set_yticks([(y-ymin) / yheight * im_height for y in ytick_labels])
+        ytick_labels = np.linspace(self.ymin, self.ymax, self.yheight / 0.5)
+        ax.set_yticks([(y-self.ymin) / self.yheight * self.im_height for y in ytick_labels])
         ax.set_yticklabels(['{:.1f}'.format(ytick) for ytick in ytick_labels])
         plt.show()
+
+Terrain = Julia(c = complex(0.65, 1.3))
+Terrain.plot()
+
+
 
 
 
