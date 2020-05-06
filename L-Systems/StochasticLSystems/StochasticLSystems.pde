@@ -1,9 +1,10 @@
-import java.util.Random;
+ import java.util.Random;
 
 String axiom = "f";
 String sentence = axiom;
 int len = 300;
 float theta = 0;
+
 
 
 
@@ -61,7 +62,7 @@ void turtle()
 
 void setup()
 {
-    theta = radians(25.7);
+    theta = radians(25);
     size(1000, 1000);
 }
 

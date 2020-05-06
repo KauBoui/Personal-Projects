@@ -1,20 +1,20 @@
 
 String axiom = "f";
 String sentence = axiom;
-int len = 100;
+int len = 50;
 float theta = 0;
 
-char[] rules_key = {'f'};
+char[] rules_key = {'f', 'h'};
 
 
-String[] rules_replace = {"f[+f]f[-f]f"};
+String[] rules_replace = {"h-f-h", "f+h+f"};
 
 
 
 void generate()
 {
     String nextSentence = "";
-    len *= 0.5;
+    len *= 0.85;
     for (int i = 0; i < sentence.length(); i++)
     {
         char current = sentence.charAt(i);
@@ -43,7 +43,7 @@ void turtle()
 {
     background(51);
     resetMatrix();
-    translate(width / 2, height);
+    translate(width,height);
     stroke(255);
     for (int i = 0; i < sentence.length(); i++)
     {
@@ -66,7 +66,7 @@ void turtle()
 
 void setup()
 {
-    theta = radians(25.7);
+    theta = radians(60);
     size(1000, 1000);
 }
 
