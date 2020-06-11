@@ -16,7 +16,7 @@ import java.io.IOException;
 
 public class StochasticLSystems extends PApplet {
 
-
+ 
 
 String axiom = "f";
 String sentence = axiom;
