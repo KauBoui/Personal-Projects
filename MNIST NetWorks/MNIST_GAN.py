@@ -57,7 +57,7 @@ def The_GAN(generator, discriminator):
 
 def real_samples(data, n):
     i = np.random.randint(0, data.shape[0], n)
-    X = data[i]
+    X = data[i] 
     Y = tf.ones((n,1))
     return X, Y
 
