@@ -35,7 +35,7 @@ def discriminator(shape):
 
 def generator(shape):
     model = models.Sequential()
-    model.add(layers.Dense(6272, activation = 'tanh', input_dim=shape))
+    model.add(layers.Dense(6272, input_dim=shape))
     model.add(layers.LeakyReLU(alpha=0.2))
     model.add(layers.Reshape((7,7,128)))
     model.add(layers.Conv2DTranspose(128, (4,4), strides = (2,2), padding='same'))
@@ -43,7 +43,7 @@ def generator(shape):
     model.add(layers.Dropout(0.5))
     model.add(layers.Conv2DTranspose(128, (4,4), strides = (2,2), padding='same'))
     model.add(layers.LeakyReLU(alpha=0.2))
-    model.add(layers.Conv2D(1, (7,7), activation='sigmoid', padding='same'))
+    model.add(layers.Conv2D(1, (7,7), activation='tanh', padding='same'))
     return model
 
 def The_GAN(generator, discriminator):
