@@ -81,17 +81,8 @@ def summarize_performance(epoch, generator, discriminator, data, shape, n_sample
     
 
 def save_model(model, epoch):
-    path = "/MNIST NetWorks/Models"
-
-    try:
-        os.mkdir(path)
-    except OSError:
-        print("Creation of the directory %s failed" % path)
-    else:
-        print("Successfully created the directory %s " % path)
     filename = 'MNIST_GAN_generator_model_%03d.h5' % (epoch + 1)
     model.save(filename)
-    shutil.move(filename, path)
     print("-------MODEL SAVED--------")
 
 def train(generator, discriminator, Gan, data, shape, epochs = 100, batch = 256):
@@ -108,7 +99,7 @@ def train(generator, discriminator, Gan, data, shape, epochs = 100, batch = 256)
             g_loss = Gan.train_on_batch(X_gan, Y_gan)
             print('>%d, %d/%d, d=%.3f, g=%.3f' % (i+1, j+1, batch_per_epoch, d_loss, g_loss))
         if (i+1) % 10 == 0:
-            save_model(generator, epochs)
+            save_model(generator, i)
 
 def save_plot(examples, n):
     for i in range(n * n):
