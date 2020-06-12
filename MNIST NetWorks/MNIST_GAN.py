@@ -87,7 +87,7 @@ def summarize_performance(epoch, generator, discriminator, data, shape, n_sample
     
 
 def save_model(model, epoch):
-    filename = 'generator_model_%03d.h5' % (epoch + 1)
+    filename = 'MNIST_GAN_generator_model_%03d.h5' % (epoch + 1)
     model.save(filename)
 
 def train(generator, discriminator, Gan, data, shape, epochs = 100, batch = 256):
@@ -104,7 +104,6 @@ def train(generator, discriminator, Gan, data, shape, epochs = 100, batch = 256)
             g_loss = Gan.train_on_batch(X_gan, Y_gan)
             print('>%d, %d/%d, d=%.3f, g=%.3f' % (i+1, j+1, batch_per_epoch, d_loss, g_loss))
     if (i+1) % 10 == 0:
-        summarize_performance(i, generator, discriminator, data, shape)
         save_model(generator, epochs)
 
 def save_plot(examples, n):
