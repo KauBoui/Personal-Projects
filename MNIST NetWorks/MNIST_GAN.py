@@ -62,8 +62,7 @@ def real_samples(data, n):
     return X, Y
 
 def latent_points(shape, n):
-    X = np.random.randn(n * shape)
-    X = X.reshape(n, shape)
+    X = np.random.randn(n, shape)
     return X 
 
 def generator_fake_samples(generator, shape, n):
@@ -91,7 +90,7 @@ def train(generator, discriminator, Gan, data, shape, epochs = 100, batch = 256)
     for i in range(epochs):
         for j in range(batch_per_epoch):
             X_real, Y_real = real_samples(data, half_batch)
-            X_fake, Y_fake = generator_fake_samples(generator, data, half_batch)
+            X_fake, Y_fake = generator_fake_samples(generator, shape, half_batch)
             X, Y = np.vstack((X_real, X_fake)), np.vstack((Y_real, Y_fake))
             d_loss, _ = discriminator.train_on_batch(X, Y)
             X_gan = latent_points(shape, batch)
