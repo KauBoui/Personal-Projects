@@ -61,14 +61,8 @@ def real_samples(data, n):
     Y = tf.ones((n,1))
     return X, Y
 
-def fake_samples(data, n):
-    X = np.random.rand(28 * 28 * n)
-    X = X.reshape((n, 28, 28, 1))
-    Y = tf.zeros((n, 1))
-    return X, Y
-
 def latent_points(shape, n):
-    X = np.random.randn(shape * n)
+    X = np.random.randn(n * shape)
     X = X.reshape(n, shape)
     return X 
 
@@ -89,6 +83,7 @@ def summarize_performance(epoch, generator, discriminator, data, shape, n_sample
 def save_model(model, epoch):
     filename = 'MNIST_GAN_generator_model_%03d.h5' % (epoch + 1)
     model.save(filename)
+    print("-------MODEL SAVED--------")
 
 def train(generator, discriminator, Gan, data, shape, epochs = 100, batch = 256):
     batch_per_epoch = int(data.shape[0] / batch)
@@ -96,7 +91,7 @@ def train(generator, discriminator, Gan, data, shape, epochs = 100, batch = 256)
     for i in range(epochs):
         for j in range(batch_per_epoch):
             X_real, Y_real = real_samples(data, half_batch)
-            X_fake, Y_fake = fake_samples(data, half_batch)
+            X_fake, Y_fake = generator_fake_samples(generator, data, half_batch)
             X, Y = np.vstack((X_real, X_fake)), np.vstack((Y_real, Y_fake))
             d_loss, _ = discriminator.train_on_batch(X, Y)
             X_gan = latent_points(shape, batch)
