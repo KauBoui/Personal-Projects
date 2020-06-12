@@ -12,46 +12,65 @@ from tensorflow.keras import models
 from tensorflow.keras import optimizers
 from tensorflow.keras import activations
 from tensorflow.keras.datasets import mnist 
-(X_train, _), (_, _) = mnist.load_data()
 
-def groom_data():
-    X = X_train.astype('float32')/255.0
-    X = np.expand_dims(X_train, -1)
-    return X
+(X_train, Y_train), (_, _) = mnist.load_data()
+X_train = X_train.reshape(X_train.shape[0], 28, 28, 1).astype('float32')
+X_train = (X_train - 127.5) / 127.5
 
-def discriminator(shape):
+BUFFER_SIZE = 60000
+BATCH_SIZE = 256
+LATENT_SPACE = 100
+
+dataset = tf.data.Dataset.from_tensor_slices(X_train).shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
+
+def generator():
+    model = models.Sequential()
+
+    model.add(layers.Dense(7*7*256, input_shape = (LATENT_SPACE, )))
+    model.add(layers.BatchNormalization())
+    model.add(layers.LeakyReLU(alpha=0.2))
+
+    model.add(layers.Reshape((7,7,128)))
+    assert model.output_shape == (None, 7, 7, 256)
+
+    model.add(layers.Conv2DTranspose(128, (5,5), strides = (2,2), padding='same'))
+    assert model.output_shape == (None, 7, 7, 128)
+    model.add(layers.BatchNormalization())
+    model.add(layers.LeakyReLU(alpha=0.2))
+    
+
+    model.add(layers.Conv2DTranspose(64, (5,5), strides = (2,2), padding='same'))
+    assert model.output_shape == (None, 14, 14, 64)
+    model.add(layers.BatchNormalization())
+    model.add(layers.LeakyReLU(alpha=0.2))
+
+    model.add(layers.Conv2D(1, (7,7), activation='tanh', padding='same'))
+    assert model.output_shape == (None, 28, 28, 1)
+
+    return model
+
+
+def discriminator(input_shape = (28,28,1)):
     model = models.Sequential()
     model.add(layers.Conv2D(64, (3,3), strides=(2,2), padding='same'))
     model.add(layers.LeakyReLU(alpha=0.2))
-    model.add(layers.Dropout(0.4))
-    model.add(layers.Conv2D(64, (3,3), strides=(2,2), padding='same'))
+    model.add(layers.Dropout(0.3))
+    model.add(layers.Conv2D(128, (3,3), strides=(2,2), padding='same'))
     model.add(layers.LeakyReLU(alpha=0.2))
-    model.add(layers.Dropout(0.4))
+    model.add(layers.Dropout(0.3))
     model.add(layers.Flatten()) 
     model.add(layers.Dense(1, activation ='sigmoid'))
-    opt = optimizers.Adam(learning_rate=0.0002, beta_1=0.5)
+    opt = optimizers.Adam(learning_rate=0.0002)
     model.compile(loss='binary_crossentropy', optimizer=opt,metrics=['accuracy'])
     return model
 
-def generator(shape):
-    model = models.Sequential()
-    model.add(layers.Dense(6272, input_dim=shape))
-    model.add(layers.LeakyReLU(alpha=0.2))
-    model.add(layers.Reshape((7,7,128)))
-    model.add(layers.Conv2DTranspose(128, (4,4), strides = (2,2), padding='same'))
-    model.add(layers.LeakyReLU(alpha=0.2))
-    model.add(layers.Dropout(0.5))
-    model.add(layers.Conv2DTranspose(128, (4,4), strides = (2,2), padding='same'))
-    model.add(layers.LeakyReLU(alpha=0.2))
-    model.add(layers.Conv2D(1, (7,7), activation='tanh', padding='same'))
-    return model
 
 def The_GAN(generator, discriminator):
     discriminator.trainable = False
     model = models.Sequential()
     model.add(generator)
     model.add(discriminator)
-    opt = optimizers.Adam(learning_rate=0.0002, beta_1=0.5)
+    opt = optimizers.Adam(learning_rate=0.0002)
     model.compile(loss='binary_crossentropy', optimizer=opt)
     return model
 
