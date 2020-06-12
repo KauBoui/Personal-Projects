@@ -78,16 +78,19 @@ def generator_fake_samples(generator, shape, n):
     Y = tf.zeros((n,1))
     return X, Y
 
-def summarize_performance(epoch, generator, discriminator, data, shape, n_sample):
+def summarize_performance(epoch, generator, discriminator, data, shape, n_sample=100):
     X_real, Y_real = real_samples(data,n_sample)
     _, real_acc = discriminator.evaluate(X_real, Y_real, verbose=0)
     X_fake, Y_fake = fake_samples(data, shape, n_sample)
     _, fake_acc = generator.evaluate(X_fake, Y_fake, verbose=0)
     print('>Accuracy real: %.0f%%, fake: %.0f%%' % (real_acc*100, fake_acc*100))
-    file_name = 'generator_model_%03d.h5' % (epoch + 1)
-    generator.save(file_name)
+    
 
-def train(generator, discriminator, Gan, data, shape, epochs = 100, batch = 256):
+def save_model(model):
+    filename = 'generator_model_%03d.h5' % (epoch + 1)
+    model.save(filename)
+
+def train(generator, discriminator, Gan, data, shape, epochs = 1, batch = 64):
     batch_per_epoch = int(data.shape[0] / batch)
     half_batch = int(batch/2)
     for i in range(epochs):
@@ -102,6 +105,7 @@ def train(generator, discriminator, Gan, data, shape, epochs = 100, batch = 256)
             print('>%d, %d/%d, d=%.3f, g=%.3f' % (i+1, j+1, batch_per_epoch, d_loss, g_loss))
     if (i+1) % 10 == 0:
         summarize_performance(i, generator, discriminator, data, shape)
+        save_model(generator)
 
 def save_plot(examples, n):
     for i in range(n * n):
