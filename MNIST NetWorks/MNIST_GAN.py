@@ -1,114 +1,168 @@
-
-import datetime
 import os
-import shutil
+import PIL
+import time
+import glob
+import imageio
 import numpy as np 
 import tensorflow as tf 
 import matplotlib.pyplot as plt
 
+from IPython import display
 from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras import models
+from tensorflow.keras import losses
 from tensorflow.keras import optimizers
 from tensorflow.keras import activations
 from tensorflow.keras.datasets import mnist 
-(X_train, _), (_, _) = mnist.load_data()
 
-def groom_data():
-    X = X_train.astype('float32')/255.0
-    X = np.expand_dims(X_train, -1)
-    return X
 
-def discriminator(shape):
-    model = models.Sequential()
-    model.add(layers.Conv2D(64, (3,3), strides=(2,2), padding='same'))
-    model.add(layers.LeakyReLU(alpha=0.2))
-    model.add(layers.Dropout(0.4))
-    model.add(layers.Conv2D(64, (3,3), strides=(2,2), padding='same'))
-    model.add(layers.LeakyReLU(alpha=0.2))
-    model.add(layers.Dropout(0.4))
-    model.add(layers.Flatten()) 
-    model.add(layers.Dense(1, activation ='sigmoid'))
-    opt = optimizers.Adam(learning_rate=0.0002, beta_1=0.5)
-    model.compile(loss='binary_crossentropy', optimizer=opt,metrics=['accuracy'])
-    return model
+(X_train, Y_train), (_, _) = mnist.load_data()
+X_train = X_train.reshape(X_train.shape[0], 28, 28, 1).astype('float32')
+X_train = (X_train - 127.5) / 127.5
 
-def generator(shape):
-    model = models.Sequential()
-    model.add(layers.Dense(6272, input_dim=shape))
-    model.add(layers.LeakyReLU(alpha=0.2))
-    model.add(layers.Reshape((7,7,128)))
-    model.add(layers.Conv2DTranspose(128, (4,4), strides = (2,2), padding='same'))
-    model.add(layers.LeakyReLU(alpha=0.2))
-    model.add(layers.Dropout(0.5))
-    model.add(layers.Conv2DTranspose(128, (4,4), strides = (2,2), padding='same'))
-    model.add(layers.LeakyReLU(alpha=0.2))
-    model.add(layers.Conv2D(1, (7,7), activation='tanh', padding='same'))
-    return model
+BUFFER_SIZE = 60000
+BATCH_SIZE = 256
+LATENT_SPACE = 100
 
-def The_GAN(generator, discriminator):
-    discriminator.trainable = False
-    model = models.Sequential()
-    model.add(generator)
-    model.add(discriminator)
-    opt = optimizers.Adam(learning_rate=0.0002, beta_1=0.5)
-    model.compile(loss='binary_crossentropy', optimizer=opt)
-    return model
+dataset = tf.data.Dataset.from_tensor_slices(X_train).shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
 
-def real_samples(data, n):
-    i = np.random.randint(0, data.shape[0], n)
-    X = data[i] 
-    Y = tf.ones((n,1))
-    return X, Y
+def generator():
+    model = tf.keras.Sequential()
 
-def latent_points(shape, n):
-    X = np.random.randn(n, shape)
-    return X 
+    model.add(layers.Dense(7*7*256, use_bias=False, input_shape = (LATENT_SPACE, )))
+    model.add(layers.BatchNormalization())
+    model.add(layers.LeakyReLU())
 
-def generator_fake_samples(generator, shape, n):
-    X_input = latent_points(shape, n)
-    X = generator.predict(X_input)
-    Y = tf.zeros((n,1))
-    return X, Y
+    model.add(layers.Reshape((7,7,256)))
+    assert model.output_shape == (None, 7, 7, 256)
 
-def summarize_performance(epoch, generator, discriminator, data, shape, n_sample=256):
-    X_real, Y_real = real_samples(data, n_sample)
-    discriminator.evaluate(x = X_real, y = Y_real)
-    X_fake, Y_fake = generator_fake_samples(generator, shape, n_sample)
-    generator.evaluate(x = X_fake, y = Y_fake)
+    model.add(layers.Conv2DTranspose(128, (5,5), strides = (1,1), padding='same', use_bias = False))
+    assert model.output_shape == (None, 7, 7, 128)
+    model.add(layers.BatchNormalization())
+    model.add(layers.LeakyReLU())
     
 
-def save_model(model, epoch):
-    filename = 'MNIST_GAN_generator_model_%03d.h5' % (epoch + 1)
-    model.save(filename)
-    print("-------MODEL SAVED--------")
+    model.add(layers.Conv2DTranspose(64, (5,5), strides = (2,2), padding='same', use_bias = False))
+    assert model.output_shape == (None, 14, 14, 64)
+    model.add(layers.BatchNormalization())
+    model.add(layers.LeakyReLU())
 
-def train(generator, discriminator, Gan, data, shape, epochs = 20, batch = 256):
-    batch_per_epoch = int(data.shape[0] / batch)
-    half_batch = int(batch/2)
-    for i in range(epochs):
-        for j in range(batch_per_epoch):
-            X_real, Y_real = real_samples(data, half_batch)
-            X_fake, Y_fake = generator_fake_samples(generator, shape, half_batch)
-            X, Y = np.vstack((X_real, X_fake)), np.vstack((Y_real, Y_fake))
-            d_loss, _ = discriminator.train_on_batch(X, Y)
-            X_gan = latent_points(shape, batch)
-            Y_gan = tf.ones((batch,1))
-            g_loss = Gan.train_on_batch(X_gan, Y_gan)
-            print('>%d, %d/%d, d=%.3f, g=%.3f' % (i+1, j+1, batch_per_epoch, d_loss, g_loss))
-        if (i+1) % 5 == 0:
-            save_model(generator, i)
+    model.add(layers.Conv2DTranspose(1, (5,5), strides = (2,2), activation='tanh', padding='same', use_bias = False))
+    assert model.output_shape == (None, 28, 28, 1)
 
-def save_plot(examples, n):
-    for i in range(n * n):
-        plt.subplot(n,n, 1 + i)
+    return model
+
+def discriminator():
+    model = tf.keras.Sequential()
+
+    model.add(layers.Conv2D(64, (5,5), strides=(2,2), padding='same', input_shape = [28,28,1]))
+    model.add(layers.LeakyReLU())
+    model.add(layers.Dropout(0.3))
+
+    model.add(layers.Conv2D(128, (5,5), strides=(2,2), padding='same'))
+    model.add(layers.LeakyReLU())
+    model.add(layers.Dropout(0.3))
+
+    model.add(layers.Flatten()) 
+    model.add(layers.Dense(1))
+    
+    return model
+
+def discriminator_loss(real_out, fake_out):
+    cross_entropy = losses.BinaryCrossentropy(from_logits=True)
+    real_loss = cross_entropy(tf.ones_like(real_out), real_out)
+    fake_loss = cross_entropy(tf.ones_like(fake_out), fake_out)
+    total_loss = real_loss + fake_loss
+    return total_loss
+
+def generator_loss(fake_out):
+    cross_entropy = losses.BinaryCrossentropy(from_logits=True)
+    return cross_entropy(tf.ones_like(fake_out), fake_out)
+
+generator = generator()
+discriminator = discriminator()
+
+generator_opt = optimizers.Adam(1e-4)
+discriminator_opt = optimizers.Adam(1e-4)
+
+checkpoint_dir = './training_checkpoints'
+checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
+checkpoint = tf.train.Checkpoint(generator_optimizer=generator_opt,
+                                 discriminator_optimizer=discriminator_opt,
+                                 generator=generator,
+                                 discriminator=discriminator)
+
+EPOCHS = 100
+EXAMPLES_TO_GENERATE = 16
+seed = tf.random.normal([EXAMPLES_TO_GENERATE, LATENT_SPACE])
+
+@tf.function
+def train_step(images):
+    latent_points = tf.random.normal([BATCH_SIZE, LATENT_SPACE])
+
+    with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
+        generated_images = generator(latent_points, training = True)
+
+        real_out = discriminator(images, training = True)
+        fake_out = discriminator(generated_images, training = True)
+
+        gen_loss = generator_loss(fake_out)
+        disc_loss = discriminator_loss(real_out, fake_out)
+
+    grads_gen = gen_tape.gradient(gen_loss, generator.trainable_variables)
+    grads_disc = disc_tape.gradient(disc_loss, discriminator.trainable_variables)
+
+    generator_opt.apply_gradients(zip(grads_gen, generator.trainable_variables))
+    discriminator_opt.apply_gradients(zip(grads_disc, discriminator.trainable_variables))
+
+def train(dataset, epochs):
+    for epoch in range(epochs):
+        start = time.time()
+        
+        for image_batch in dataset:
+            train_step(image_batch)
+        
+        display.clear_output(wait=True)
+        generate_and_save_images(generator, epoch + 1, seed)
+
+        if (epoch + 1) % 10 == 0:
+            checkpoint.save(file_prefix=checkpoint_prefix)
+        
+        print ('Time for epoch {} is {} sec'.format(epoch + 1, time.time()-start))
+
+    display.clear_output(wait=True)
+    generate_and_save_images(generator, epoch, seed)
+
+def generate_and_save_images(model, epoch, test_input):
+    predictions = model(test_input, training=False)
+
+    fig = plt.figure(figsize=(4,4))
+
+    for i in range(predictions.shape[0]):
+        plt.subplot(4, 4, i+1)
+        plt.imshow(predictions[i,:,:,0] * 127.5 + 127.5, cmap = 'gray_r')
         plt.axis('off')
-        plt.imshow(examples[i,:,:,0], cmap='gray_r')
+    plt.savefig('image_at_epoch_{:04d}.png'.format(epoch))
     plt.show()
 
-shape = 256
-discriminator = discriminator((28,28,1))
-generator = generator(shape)
-Gan = The_GAN(generator, discriminator)
-data = groom_data()
-train(generator, discriminator, Gan, data, shape)
+def display_image(epoch_no):
+    return PIL.Image.open('image_at_epoch_{:04d}.png'.format(epoch_no))
+
+train(dataset, EPOCHS)
+
+Gif_out = 'MNIST_GAN.gif'
+
+with imageio.get_writer(Gif_out, mode='I') as writer:
+    filenames = glob.glob('image*.png')
+    filenames = sorted(filenames)
+    last = -1
+    for i, filename in enumerate(filenames):
+        frame = 2*(i**0.5)
+        if round(frame) > round(last):
+            last = frame
+        else:
+            continue
+        image = imageio.imread(filename)
+        writer.append_data(image)
+
