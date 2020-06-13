@@ -23,14 +23,14 @@ X_train = (X_train - 127.5) / 127.5
 
 BUFFER_SIZE = 60000
 BATCH_SIZE = 256
-LATENT_SPACE = 100
 
-dataset = tf.data.Dataset.from_tensor_slices(X_train).shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
+
+train_dataset = tf.data.Dataset.from_tensor_slices(X_train).shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
 
 def generator():
     model = tf.keras.Sequential()
 
-    model.add(layers.Dense(7*7*256, use_bias=False, input_shape = (LATENT_SPACE, )))
+    model.add(layers.Dense(7*7*256, use_bias=False, input_shape = (100, )))
     model.add(layers.BatchNormalization())
     model.add(layers.LeakyReLU())
 
@@ -72,7 +72,7 @@ def discriminator():
 def discriminator_loss(real_out, fake_out):
     cross_entropy = losses.BinaryCrossentropy(from_logits=True)
     real_loss = cross_entropy(tf.ones_like(real_out), real_out)
-    fake_loss = cross_entropy(tf.ones_like(fake_out), fake_out)
+    fake_loss = cross_entropy(tf.zeros_like(fake_out), fake_out)
     total_loss = real_loss + fake_loss
     return total_loss
 
@@ -83,8 +83,8 @@ def generator_loss(fake_out):
 generator = generator()
 discriminator = discriminator()
 
-generator_opt = optimizers.Adam(1e-4)
-discriminator_opt = optimizers.Adam(1e-4)
+generator_opt = optimizers.Adam(0.0001)
+discriminator_opt = optimizers.Adam(0.0001)
 
 checkpoint_dir = './training_checkpoints'
 checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
@@ -94,12 +94,13 @@ checkpoint = tf.train.Checkpoint(generator_optimizer=generator_opt,
                                  discriminator=discriminator)
 
 EPOCHS = 100
-EXAMPLES_TO_GENERATE = 16
-seed = tf.random.normal([EXAMPLES_TO_GENERATE, LATENT_SPACE])
+examples_to_generate = 16
+noise_dims = 100
+seed = tf.random.normal([examples_to_generate, noise_dims])
 
 @tf.function
 def train_step(images):
-    latent_points = tf.random.normal([BATCH_SIZE, LATENT_SPACE])
+    latent_points = tf.random.normal([BATCH_SIZE, noise_dims])
 
     with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
         generated_images = generator(latent_points, training = True)
@@ -144,12 +145,12 @@ def generate_and_save_images(model, epoch, test_input):
         plt.imshow(predictions[i,:,:,0] * 127.5 + 127.5, cmap = 'gray_r')
         plt.axis('off')
     plt.savefig('image_at_epoch_{:04d}.png'.format(epoch))
-    plt.show()
+    plt.close(fig)
 
 def display_image(epoch_no):
     return PIL.Image.open('image_at_epoch_{:04d}.png'.format(epoch_no))
 
-train(dataset, EPOCHS)
+train(train_dataset, EPOCHS)
 
 Gif_out = 'MNIST_GAN.gif'
 
