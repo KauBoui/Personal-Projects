@@ -67,7 +67,13 @@ def discriminator():
     model.add(layers.Dropout(0.3))
 
     model.add(layers.MaxPooling2D((2,2), strides=(2,2), padding = 'same'))
-
+    
+    model.add(layers.Conv2D(256, (5,5), strides=(2,2), padding='same'))
+    model.add(layers.LeakyReLU())
+    model.add(layers.Dropout(0.3))
+    
+    model.add(layers.MaxPooling2D((2,2), strides=(2,2), padding = 'same'))
+    
     model.add(layers.Flatten()) 
     model.add(layers.Dense(1))
     
@@ -97,7 +103,7 @@ checkpoint = tf.train.Checkpoint(generator_optimizer=generator_opt,
                                  generator=generator,
                                  discriminator=discriminator)
 
-EPOCHS = 500
+EPOCHS = 100
 examples_to_generate = 16
 noise_dims = 100
 seed = tf.random.normal([examples_to_generate, noise_dims])
