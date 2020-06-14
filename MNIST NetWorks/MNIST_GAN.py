@@ -93,7 +93,7 @@ checkpoint = tf.train.Checkpoint(generator_optimizer=generator_opt,
                                  generator=generator,
                                  discriminator=discriminator)
 
-EPOCHS = 100
+EPOCHS = 500
 examples_to_generate = 16
 noise_dims = 100
 seed = tf.random.normal([examples_to_generate, noise_dims])
