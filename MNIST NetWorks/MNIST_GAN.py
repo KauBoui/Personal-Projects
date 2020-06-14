@@ -60,9 +60,13 @@ def discriminator():
     model.add(layers.LeakyReLU())
     model.add(layers.Dropout(0.3))
 
+    model.add(layers.MaxPooling2D((2,2), strides=(2,2), padding = 'same'))
+
     model.add(layers.Conv2D(128, (5,5), strides=(2,2), padding='same'))
     model.add(layers.LeakyReLU())
     model.add(layers.Dropout(0.3))
+
+    model.add(layers.MaxPooling2D((2,2), strides=(2,2), padding = 'same'))
 
     model.add(layers.Flatten()) 
     model.add(layers.Dense(1))
