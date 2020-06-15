@@ -65,7 +65,7 @@ def discriminator():
     model.add(layers.Conv2D(20, (26,26), padding='same'))
     model.add(layers.MaxPooling2D((2,2), strides=(2,2), padding = 'same'))
 
-    model.add(layers.Conv2D(800, (5,5), padding='same'))
+    model.add(layers.Conv2D(256, (5,5), padding='same'))
     model.add(layers.LeakyReLU())
     model.add(layers.Dropout(0.3))
 
@@ -163,7 +163,7 @@ def display_image(epoch_no):
 
 train(train_dataset, EPOCHS)
 
-Gif_out = 'MNIST_GAN.gif'
+Gif_out = 'MNIST_MCDNN_GAN.gif'
 
 with imageio.get_writer(Gif_out, mode='I') as writer:
     filenames = glob.glob('image*.png')
