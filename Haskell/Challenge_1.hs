@@ -68,10 +68,35 @@ combinations :: Int -> [a] -> [[a]]
 combinations 0 _ = [[]]
 combinations n xs = [y:ys | y:xs' <-tails xs , ys <- combinations (n-1) xs]
 
-lazyPrimes :: [Integer]
-lazyPrimes = sieve (2:[3,5..])
-    where
-        sieve (p:xs) = p : sieve [x | x <- xs, x `mod` p > 0]
+coprime :: Int -> Int -> Bool
+coprime a b = gcd a b == 1
+
+factor :: Int -> [Int]
+factor 1 = []
+factor n = let prime = head $ dropWhile ((/=0) . mod n) [2..n] in (prime :) $ factor $ div n prime
+
+factorMult :: Int -> [(Int, Int)]
+factorMult = map encode . group  . factor
+    where encode xs = (head xs, length xs)
+
+totient1 :: Int -> Int
+totient1 1 = 1 
+totient1 n = length $ filter (coprime n) [1..n-1]
+
+totient2 :: Int -> Int
+totient2 n = product [(p-1) * p ^ (c-1) | (p,c) <- factorMult n]
+
+_Y :: (t -> t) -> t
+_Y g = g (_Y g)
+lazyPrimes :: [Int]
+lazyPrimes = [2,3,5,7] ++ _Y ((11:) . tail . gapsW 11 wheel . joinT . hitsW 11 wheel)
+joinT ((x:xs):t) = x : union xs (joinT (pairs t))
+    where pairs (xs:ys:t) = union xs ys : pairs t
+gapsW k (d:w) s@(c:cs)  | k < c     = k : gapsW (k+d) w s
+                        | otherwise = gapsW (k+d) w cs
+hitsW k (d:w) s@(p:ps)  | k < p     = hitsW (k+d) w s
+                        | otherwise = scanl (\c d->c+p*d) (p*p) (d:w) : hitsW (k+d) w ps
+wheel = 2:4:2:4:6:2:6:4:2:4:6:6:2:6:4:2:6:4:6:8:4:2:4:2:4:8:6:4:6:2:4:6:2:6:6:4:2:4:6:2:6:4:2:4:2:10:2:10:wheel
 
 a = take 20 lazyPrimes
 
