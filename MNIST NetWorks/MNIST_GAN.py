@@ -79,80 +79,30 @@ def discriminator():
     
     return model
 
-def discriminator_loss(real_out, fake_out):
-    cross_entropy = losses.BinaryCrossentropy(from_logits=True)
-    real_loss = cross_entropy(tf.ones_like(real_out), real_out)
-    fake_loss = cross_entropy(tf.zeros_like(fake_out), fake_out)
-    total_loss = real_loss + fake_loss
-    return total_loss
+def save_model(model, epoch):
+    filename = 'MNIST_GAN_generator_model_%03d.h5' % (epoch + 1)
+    model.save(filename)
+    print("-------MODEL SAVED--------")
 
-def generator_loss(fake_out):
-    cross_entropy = losses.BinaryCrossentropy(from_logits=True)
-    return cross_entropy(tf.ones_like(fake_out), fake_out)
+def train(generator, discriminator, Gan, data, shape, epochs = 100, batch = 256):
+    batch_per_epoch = int(data.shape[0] / batch)
+    half_batch = int(batch/2)
+    for i in range(epochs):
+        for j in range(batch_per_epoch):
+            X_real, Y_real = real_samples(data, half_batch)
+            X_fake, Y_fake = generator_fake_samples(generator, shape, half_batch)
+            X, Y = np.vstack((X_real, X_fake)), np.vstack((Y_real, Y_fake))
+            d_loss, _ = discriminator.train_on_batch(X, Y)
+            X_gan = latent_points(shape, batch)
+            Y_gan = tf.ones((batch,1))
+            g_loss = Gan.train_on_batch(X_gan, Y_gan)
+            print('>%d, %d/%d, d=%.3f, g=%.3f' % (i+1, j+1, batch_per_epoch, d_loss, g_loss))
+        if (i+1) % 10 == 0:
+            save_model(generator, epochs)
 
-generator = generator()
-discriminator = discriminator()
-
-generator_opt = optimizers.Adam(0.0001)
-discriminator_opt = optimizers.Adam(0.0001)
-
-checkpoint_dir = './training_checkpoints'
-checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
-checkpoint = tf.train.Checkpoint(generator_optimizer=generator_opt,
-                                 discriminator_optimizer=discriminator_opt,
-                                 generator=generator,
-                                 discriminator=discriminator)
-
-EPOCHS = 100
-examples_to_generate = 16
-noise_dims = 100
-seed = tf.random.normal([examples_to_generate, noise_dims])
-
-@tf.function
-def train_step(images):
-    latent_points = tf.random.normal([BATCH_SIZE, noise_dims])
-
-    with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
-        generated_images = generator(latent_points, training = True)
-
-        real_out = discriminator(images, training = True)
-        fake_out = discriminator(generated_images, training = True)
-
-        gen_loss = generator_loss(fake_out)
-        disc_loss = discriminator_loss(real_out, fake_out)
-
-    grads_gen = gen_tape.gradient(gen_loss, generator.trainable_variables)
-    grads_disc = disc_tape.gradient(disc_loss, discriminator.trainable_variables)
-
-    generator_opt.apply_gradients(zip(grads_gen, generator.trainable_variables))
-    discriminator_opt.apply_gradients(zip(grads_disc, discriminator.trainable_variables))
-
-def train(dataset, epochs):
-    for epoch in range(epochs):
-        start = time.time()
-        
-        for image_batch in dataset:
-            train_step(image_batch)
-        
-        display.clear_output(wait=True)
-        generate_and_save_images(generator, epoch + 1, seed)
-
-        if (epoch + 1) % 10 == 0:
-            checkpoint.save(file_prefix=checkpoint_prefix)
-        
-        print ('Time for epoch {} is {} sec'.format(epoch + 1, time.time()-start))
-
-    display.clear_output(wait=True)
-    generate_and_save_images(generator, epoch, seed)
-
-def generate_and_save_images(model, epoch, test_input):
-    predictions = model(test_input, training=False)
-
-    fig = plt.figure(figsize=(4,4))
-
-    for i in range(predictions.shape[0]):
-        plt.subplot(4, 4, i+1)
-        plt.imshow(predictions[i,:,:,0] * 127.5 + 127.5, cmap = 'gray_r')
+def save_plot(examples, n):
+    for i in range(n * n):
+        plt.subplot(n,n, 1 + i)
         plt.axis('off')
     plt.savefig('image_at_epoch_{:04d}.png'.format(epoch))
     plt.close(fig)
