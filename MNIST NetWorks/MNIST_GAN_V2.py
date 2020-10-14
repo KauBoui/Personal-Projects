@@ -2,28 +2,28 @@ import os
 import PIL
 import time
 import glob
+import keras
 import imageio
 import numpy as np 
 import tensorflow as tf 
 import matplotlib.pyplot as plt
 
+from keras import layers
+from keras import models
+from keras import losses
 from IPython import display
-from tensorflow import keras
-from tensorflow.keras import layers
-from tensorflow.keras import models
-from tensorflow.keras import losses
-from tensorflow.keras import optimizers
-from tensorflow.keras import activations
-from tensorflow.keras.datasets import mnist 
+from keras import optimizers
+from keras import activations
+from keras.datasets import mnist 
 
-class GAN:
-    def GAN_model(self, batchsize, epochs):
+class GAN(self):
+    self.EPOCHS = epochs
+    self.BUFFERSIZE = 60000
+    self.BATCH_SIZE = batchsize
+    self.noise_dim = 100
+    
+    class GAN_model(self, batchsize, epochs):
         
-        self.EPOCHS = epochs
-        self.BUFFERSIZE = 60000
-        self.BATCH_SIZE = batchsize
-        self.noise_dim = 100
-
         def real_data(self):
             (X_train, _), (_,_) = mnist.load_data()
             X_train = X_train.reshape(X_train.shape[0], 28, 28, 1).astype('float32')
@@ -83,6 +83,17 @@ class GAN:
             model.compile(optimizer=opt, loss='binarycrossentropyloss', metrics=['accuracy'])
 
             return model
+        
+        def discriminator_loss(real_out, fake_out):
+            cross_entropy = losses.BinaryCrossentropy(from_logits=True)
+            real_loss = cross_entropy(tf.ones_like(real_out), real_out)
+            fake_loss = cross_entropy(tf.zeros_like(fake_out), fake_out)
+            total_loss = real_loss + fake_loss
+            return total_loss
+
+        def generator_loss(fake_out):
+            cross_entropy = losses.BinaryCrossentropy(from_logits=True)
+            return cross_entropy(tf.ones_like(fake_out), fake_out)
 
         self.discriminator = discriminator()
         self.generator = generator()
@@ -94,8 +105,75 @@ class GAN:
         opt = optimizers.Adam(lr=0.0002, beta_1=0.5)
         model.compile(loss='binary_crossentropy', optimizer=opt)
         return model
-    
-    def train(self, model):
+
+        @tf.function
+        def train_step(images):
+            latent_points = tf.random.normal([BATCH_SIZE, noise_dims])
+
+            with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
+                generated_images = generator(latent_points, training = True)
+
+                real_out = discriminator(images, training = True)
+                fake_out = discriminator(generated_images, training = True)
+
+                gen_loss = generator_loss(fake_out)
+                disc_loss = discriminator_loss(real_out, fake_out)
+
+            grads_gen = gen_tape.gradient(gen_loss, generator.trainable_variables)
+            grads_disc = disc_tape.gradient(disc_loss, discriminator.trainable_variables)
+
+            generator_opt.apply_gradients(zip(grads_gen, generator.trainable_variables))
+            discriminator_opt.apply_gradients(zip(grads_disc, discriminator.trainable_variables))
+
+        def train(dataset, epochs):
+            for epoch in range(epochs):
+                start = time.time()
+
+                for image_batch in dataset:
+                    train_step(image_batch)
+
+                display.clear_output(wait=True)
+                generate_and_save_images(generator, epoch + 1, seed)
+
+                if (epoch + 1) % 10 == 0:
+                    checkpoint.save(file_prefix=checkpoint_prefix)
+
+                print ('Time for epoch {} is {} sec'.format(epoch + 1, time.time()-start))
+
+            display.clear_output(wait=True)
+            generate_and_save_images(generator, epoch, seed)
+
+        def generate_and_save_images(model, epoch, test_input):
+            predictions = model(test_input, training=False)
+
+            fig = plt.figure(figsize=(4,4))
+
+            for i in range(predictions.shape[0]):
+                plt.subplot(4, 4, i+1)
+                plt.imshow(predictions[i,:,:,0] * 127.5 + 127.5, cmap = 'gray_r')
+                plt.axis('off')
+            plt.savefig('image_at_epoch_{:04d}.png'.format(epoch))
+            plt.close(fig)
+
+        def display_image(epoch_no):
+            return PIL.Image.open('image_at_epoch_{:04d}.png'.format(epoch_no))
+
+        train(train_dataset, EPOCHS)
+
+        Gif_out = 'MNIST_GAN.gif'
+
+        with imageio.get_writer(Gif_out, mode='I') as writer:
+            filenames = glob.glob('image*.png')
+            filenames = sorted(filenames)
+            last = -1
+            for i, filename in enumerate(filenames):
+                frame = 2*(i**0.5)
+                if round(frame) > round(last):
+                    last = frame
+                else:
+                    continue
+                image = imageio.imread(filename)
+                writer.append_data(image)
 
 
         
